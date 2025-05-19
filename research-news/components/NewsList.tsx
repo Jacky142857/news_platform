@@ -97,8 +97,6 @@ export default function NewsList({ filters }: NewsListProps) {
         <NewsCard
           key={item._id}
           news={item}
-          onSwipeAction={handleMarkAsRead}
-          onToggleImportant={handleToggleImportant}
         />
       ))}
     </div>

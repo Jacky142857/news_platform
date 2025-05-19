@@ -1,12 +1,19 @@
-import React, { useState } from 'react'
+import React from 'react'
 import Head from 'next/head'
+import { useRouter } from 'next/router'
 import ResearcherFilter from '../components/ResearcherFilter'
-import NewsList from '../components/NewsList'
 
 export default function Home() {
-  const [selectedResearcher, setSelectedResearcher] = useState('all')
-  const [showRead, setShowRead] = useState(false)
-  const [showImportant, setShowImportant] = useState(false)
+  const router = useRouter()
+
+  const handleResearcherChange = (newResearcher: string) => {
+    // Redirect to /[researcher]
+    if (newResearcher !== 'all') {
+      router.push(`/${encodeURIComponent(newResearcher)}`)
+    } else {
+      router.push(`/all`)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-white">
@@ -15,7 +22,6 @@ export default function Home() {
         <meta name="description" content="News dashboard for research analysts" />
       </Head>
 
-      {/* Header */}
       <header className="bg-white shadow-md sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <h1 className="text-3xl font-semibold text-gray-800 tracking-tight">
@@ -24,26 +30,16 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         <div className="bg-white rounded-2xl shadow p-6 transition hover:shadow-lg duration-300">
+          {/* Only keep researcher filter */}
           <ResearcherFilter
-            selectedResearcher={selectedResearcher}
-            onResearcherChange={setSelectedResearcher}
-            showRead={showRead}
-            onShowReadChange={setShowRead}
-            showImportant={showImportant}
-            onShowImportantChange={setShowImportant}
-          />
-        </div>
-
-        <div className="bg-white rounded-2xl shadow p-6 transition hover:shadow-lg duration-300">
-          <NewsList
-            filters={{
-              researcher: selectedResearcher,
-              showRead,
-              showImportant
-            }}
+            selectedResearcher="all"
+            onResearcherChange={handleResearcherChange}
+            showRead={false}
+            onShowReadChange={() => {}}
+            showImportant={false}
+            onShowImportantChange={() => {}}
           />
         </div>
       </main>
