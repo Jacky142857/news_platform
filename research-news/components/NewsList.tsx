@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react'
 import { News } from '../lib/types'
 import NewsCard from './NewsCard'
@@ -37,21 +38,29 @@ export default function NewsList({ filters }: NewsListProps) {
     }
   }
 
-  const handleMarkAsRead = async (newsId: string) => {
+  const handleUpdateReadStatus = async (newsId: string, isRead: boolean) => {
     try {
       await fetch(`/api/news/${newsId}/read`, {
-        method: 'PATCH'
+        method: 'PATCH', 
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ isRead })
       })
       
-      // Remove from list if not showing read news
-      if (!filters.showRead) {
-        setNews(prev => prev.filter(item => item._id !== newsId))
-      } else {
-        // Update the news item to show as read
-        setNews(prev => prev.map(item => 
-          item._id === newsId ? { ...item, isRead: true } : item
-        ))
-      }
+      setNews(prev =>
+        prev
+        // 1. Update the matching item
+        .map(item =>
+          item._id === newsId ? { ...item, isRead } : item
+        )
+        // 2. Filter out if we are not showing read news and item is now read
+        .filter(item => {
+          if (!filters.showRead && item.isRead) return false
+          if (!filters.showRead && !isRead) return false
+          return true
+        })
+      )
     } catch (error) {
       console.error('Error marking as read:', error)
     }
@@ -97,6 +106,7 @@ export default function NewsList({ filters }: NewsListProps) {
         <NewsCard
           key={item._id}
           news={item}
+          onUpdateReadStatus={handleUpdateReadStatus}
         />
       ))}
     </div>

@@ -1,11 +1,11 @@
-import React from 'react'
+import React, { useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import ResearcherFilter from '../components/ResearcherFilter'
 
 export default function Home() {
   const router = useRouter()
-
+  const [selectdDate, setSelectedDate] = useState<string>('')
   const handleResearcherChange = (newResearcher: string) => {
     // Redirect to /[researcher]
     if (newResearcher !== 'all') {
