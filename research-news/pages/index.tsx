@@ -5,7 +5,7 @@ import ResearcherFilter from '../components/ResearcherFilter'
 
 export default function Home() {
   const router = useRouter()
-  const [selectdDate, setSelectedDate] = useState<string>('')
+  const [selectdDate, setSelectedDate] = useState('')
   const handleResearcherChange = (newResearcher: string) => {
     // Redirect to /[researcher]
     if (newResearcher !== 'all') {
@@ -40,6 +40,8 @@ export default function Home() {
             onShowReadChange={() => {}}
             showImportant={false}
             onShowImportantChange={() => {}}
+            selectedDate = {selectdDate}
+            onSelectedDateChange = {setSelectedDate}
           />
         </div>
       </main>

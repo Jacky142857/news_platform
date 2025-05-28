@@ -8,6 +8,7 @@ interface NewsListProps {
     researcher: string
     showRead: boolean
     showImportant: boolean
+    selectedDate: string
   }
 }
 
@@ -16,6 +17,7 @@ export default function NewsList({ filters }: NewsListProps) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    console.log('Filters passed to NewsList:', filters)
     fetchNews()
   }, [filters])
 
@@ -27,6 +29,10 @@ export default function NewsList({ filters }: NewsListProps) {
         showRead: filters.showRead.toString(),
         showImportant: filters.showImportant.toString()
       })
+
+      if (filters.selectedDate) {
+        params.append('selectedDate', filters.selectedDate)
+      }
       
       const response = await fetch(`/api/news?${params}`)
       const data = await response.json()

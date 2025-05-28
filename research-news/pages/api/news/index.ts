@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import clientPromise from '../../../lib/mongodb'
-import { News } from '../../../lib/types'
 
 export default async function handler(
   req: NextApiRequest,
@@ -12,22 +11,49 @@ export default async function handler(
     const news = db.collection('news')
 
     if (req.method === 'GET') {
-      const { researcher, showRead, showImportant } = req.query
-      
-      let query: any = {}
-      
+      const { researcher, showRead, showImportant, selectedDate } = req.query
+
+      const query: any = {}
+
+      // Researcher filter
       if (researcher && researcher !== 'all') {
         query.researcher = researcher
       }
-      
+
+      // Read filter
       if (showRead === 'false') {
         query.isRead = false
       }
-      
+
+      // Important filter
       if (showImportant === 'true') {
         query.isImportant = true
       }
 
+      // Date filter
+      if (selectedDate && typeof selectedDate === 'string') {
+        // Parse the selected date string (e.g. '2024-05-25')
+        const selected = new Date(selectedDate)
+
+        // Set time to start of day (local)
+        const start = new Date(`${selectedDate}T00:00:00.000Z`)
+
+        start.setHours(0, 0, 0, 0)
+
+        // Set time to end of day
+        const end = new Date(`${selectedDate}T23:59:59.999Z`)
+        end.setHours(23, 59, 59, 999)
+
+        console.log('Filtering between:', start.toISOString(), 'and', end.toISOString())
+
+        query.date = {
+          $gte: start,
+          $lte: end
+        }
+      }
+
+      console.log('API Query Params:', req.query)
+      console.log('MongoDB Query Object:', query)
       const result = await news
         .find(query)
         .sort({ date: -1 })

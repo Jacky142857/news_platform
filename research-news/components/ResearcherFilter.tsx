@@ -7,6 +7,8 @@ interface ResearcherFilterProps {
   onShowReadChange: (showRead: boolean) => void
   showImportant: boolean
   onShowImportantChange: (showImportant: boolean) => void
+  selectedDate: string 
+  onSelectedDateChange: (date: string) => void
 }
 
 export default function ResearcherFilter({
@@ -15,11 +17,18 @@ export default function ResearcherFilter({
   showRead,
   onShowReadChange,
   showImportant,
-  onShowImportantChange
+  onShowImportantChange,
+  selectedDate,
+  onSelectedDateChange
 }: ResearcherFilterProps) {
   const [researchers, setResearchers] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const pastFiveDays = Array.from({ length: 5 }).map((_, i) => {
+    const date = new Date()
+    date.setDate(date.getDate() - i)
+    return date.toISOString().slice(0, 10)
+  })
 
   useEffect(() => {
     fetchResearchers()
@@ -109,6 +118,25 @@ export default function ResearcherFilter({
           <label htmlFor="showImportant" className="text-sm font-medium text-gray-700">
             Important Only
           </label>
+        </div>
+
+        <div>
+          <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
+            Date (Last 5 Days)
+          </label>
+          <select
+            id="date"
+            value={selectedDate}
+            onChange={(e) => onSelectedDateChange(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Dates</option>
+            {pastFiveDays.map(date => (
+              <option key={date} value={date}>
+                {date}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
     </div>

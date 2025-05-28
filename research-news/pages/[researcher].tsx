@@ -11,6 +11,7 @@ export default function ResearcherPage() {
   const [showRead, setShowRead] = useState(false)
   const [showImportant, setShowImportant] = useState(false)
   const [showFilterMobile, setShowFilterMobile] = useState(false)
+  const [selectedDate, setSelectedDate] = useState('')
 
   const handleResearcherChange = (newResearcher: string) => {
     if (newResearcher !== 'all') {
@@ -49,7 +50,10 @@ export default function ResearcherPage() {
               onShowReadChange={setShowRead}
               showImportant={showImportant}
               onShowImportantChange={setShowImportant}
+              selectedDate={selectedDate} // ✅ Add this
+              onSelectedDateChange={setSelectedDate} // ✅ Add this
             />
+
           </div>
         </div>
       </header>
@@ -60,7 +64,8 @@ export default function ResearcherPage() {
             filters={{
               researcher: Array.isArray(researcher) ? researcher[0] : (researcher || 'all'),
               showRead,
-              showImportant
+              showImportant, 
+              selectedDate
             }}
           />
         </div>
