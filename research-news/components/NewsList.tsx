@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react'
 import { News } from '../lib/types'
 import NewsCard from './NewsCard'
@@ -54,19 +53,8 @@ export default function NewsList({ filters }: NewsListProps) {
         body: JSON.stringify({ isRead })
       })
       
-      setNews(prev =>
-        prev
-        // 1. Update the matching item
-        .map(item =>
-          item._id === newsId ? { ...item, isRead } : item
-        )
-        // 2. Filter out if we are not showing read news and item is now read
-        .filter(item => {
-          if (!filters.showRead && item.isRead) return false
-          if (!filters.showRead && !isRead) return false
-          return true
-        })
-      )
+      // Simply refetch the data to ensure correct filtering
+      fetchNews()
     } catch (error) {
       console.error('Error marking as read:', error)
     }
@@ -82,7 +70,8 @@ export default function NewsList({ filters }: NewsListProps) {
         body: JSON.stringify({ isImportant })
       })
       
-      setNews(prev => prev.map(item => 
+      // Update the item in place since importance filtering doesn't need immediate re-filtering
+      setNews(prev => prev.map(item =>
         item._id === newsId ? { ...item, isImportant } : item
       ))
     } catch (error) {

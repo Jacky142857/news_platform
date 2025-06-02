@@ -8,7 +8,7 @@ interface NewsCardProps {
 }
 
 export default function NewsCard({ news, onUpdateReadStatus }: NewsCardProps) {
-  const [showSummary, setShowSummary] = useState(false)
+  const [showSummaryPopup, setShowSummaryPopup] = useState(false)
 
   const handleMarkAsRead = () => {
     onUpdateReadStatus(news._id, true)
@@ -22,77 +22,103 @@ export default function NewsCard({ news, onUpdateReadStatus }: NewsCardProps) {
     window.open(news.link, '_blank', 'noopener,noreferrer')
   }
 
-  const toggleSummary = () => {
-    setShowSummary(!showSummary)
+  const toggleSummaryPopup = () => {
+    setShowSummaryPopup(!showSummaryPopup)
   }
 
   return (
-    <div
-      className={`bg-white rounded-lg shadow-sm border border-gray-200 
-                  ${news.isRead ? 'opacity-60' : ''}`}
-    >
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       <div className="p-4 relative">
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="text-lg font-semibold text-gray-900 flex-1 pr-2">
-            {news.title}
-          </h3>
-        </div>
+        {/* Main content layout - always flex on large screens */}
+        <div className="lg:flex lg:gap-4 lg:h-full">
+          {/* Left side content (news info) - takes 2/5 on large screens */}
+          <div className="lg:w-2/5 lg:flex lg:flex-col">
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 flex-1 pr-2">
+                {news.title}
+              </h3>
+            </div>
 
-        <p className="text-sm text-gray-600 mb-2">
-          Researcher: <span className="font-medium">{news.researcher}</span>
-        </p>
+            <p className="text-sm text-gray-600 mb-2">
+              Researcher: <span className="font-medium">{news.researcher}</span>
+            </p>
 
-        <div className="text-xs text-gray-500 mb-3">
-          <span>{format(new Date(news.date), 'MMM dd, yyyy')}</span>
-        </div>
+            <div className="text-xs text-gray-500 mb-3">
+              <span>{format(new Date(news.date), 'MMM dd, yyyy')}</span>
+            </div>
 
-        <div className="flex gap-2">
-          {news.isRead ? (
-            <button
-              onClick={handleMarkAsUnread}
-              className="px-3 py-1 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200"
-            >
-              Mark as Unread
-            </button>
-          ) : (
-            <button
-              onClick={handleMarkAsRead}
-              className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200"
-            >
-              Mark as Read
-            </button>
-          )}
-          <button
-            onClick={toggleSummary}
-            className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-          >
-            Summary
-          </button>
-          <button
-            onClick={handleOpenLink}
-            className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-          >
-            Read Full Article
-          </button>
+            <div className="flex gap-2 lg:mt-auto">
+              {news.isRead ? (
+                <button
+                  onClick={handleMarkAsUnread}
+                  className="px-3 py-1 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200"
+                >
+                  Mark as Unread
+                </button>
+              ) : (
+                <button
+                  onClick={handleMarkAsRead}
+                  className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200"
+                >
+                  Mark as Read
+                </button>
+              )}
+              
+              {/* Summary button - only visible on small screens */}
+              <button
+                onClick={toggleSummaryPopup}
+                className="lg:hidden px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+              >
+                Summary
+              </button>
+              
+              <button
+                onClick={handleOpenLink}
+                className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+              >
+                Read Full Article
+              </button>
+            </div>
+          </div>
+
+          {/* Right side summary - always visible on large screens, takes 3/5 */}
+          <div className="hidden lg:flex lg:flex-col lg:w-3/5 bg-gray-50 rounded-lg p-4 mt-4 lg:mt-0">
+            <div className="flex justify-between items-center mb-3">
+              <h4 className="text-lg font-semibold text-gray-900">Summary</h4>
+              <button
+                onClick={toggleSummaryPopup}
+                className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+              >
+                Show More
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed line-clamp-6">
+                {news.summary}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Overlay Modal for Summary */}
-      {showSummary && (
+      {/* Popup modal for both small screens and "Show More" on large screens */}
+      {showSummaryPopup && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-          onClick={toggleSummary} // <-- click outside closes
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={toggleSummaryPopup}
         >
           <div
-            className="bg-white rounded-lg shadow-lg p-6 max-w-md mx-auto"
-            onClick={(e) => e.stopPropagation()} // <-- click inside won't close
+            className="bg-white rounded-lg shadow-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
           >
-            <h4 className="text-lg font-semibold mb-4">Summary</h4>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{news.summary}</p>
-            <div className="mt-4 text-right">
+            <h4 className="text-lg font-semibold mb-4 text-gray-900">Full Summary</h4>
+            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed mb-4">
+              {news.summary}
+            </p>
+            <div className="text-right">
               <button
-                onClick={toggleSummary}
-                className="px-4 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                onClick={toggleSummaryPopup}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
               >
                 Close
               </button>
@@ -100,7 +126,6 @@ export default function NewsCard({ news, onUpdateReadStatus }: NewsCardProps) {
           </div>
         </div>
       )}
-
     </div>
   )
 }

@@ -50,8 +50,8 @@ export default function ResearcherPage() {
               onShowReadChange={setShowRead}
               showImportant={showImportant}
               onShowImportantChange={setShowImportant}
-              selectedDate={selectedDate} // ✅ Add this
-              onSelectedDateChange={setSelectedDate} // ✅ Add this
+              selectedDate={selectedDate}
+              onSelectedDateChange={setSelectedDate}
             />
 
           </div>

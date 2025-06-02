@@ -22,12 +22,16 @@ export default async function handler(
 
       // Read filter
       if (showRead === 'false') {
-        query.isRead = false
+        query.isRead = false  // Show only unread
+      } else if (showRead === 'true') {
+        query.isRead = true   // Show only read
       }
 
       // Important filter
       if (showImportant === 'true') {
         query.isImportant = true
+      } else {
+        query.isImportant = false
       }
 
       // Date filter
