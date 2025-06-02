@@ -9,9 +9,8 @@ export default async function handler(
     const client = await clientPromise
     const db = client.db('research_news')
     const news = db.collection('news')
-
     if (req.method === 'GET') {
-      const { researcher, showRead, showImportant, selectedDate } = req.query
+      const { researcher, showRead, showImportant, selectedDate, page = '1', pageSize='10' } = req.query
 
       const query: any = {}
 
@@ -30,40 +29,34 @@ export default async function handler(
       // Important filter
       if (showImportant === 'true') {
         query.isImportant = true
-      } else {
-        query.isImportant = false
       }
 
       // Date filter
       if (selectedDate && typeof selectedDate === 'string') {
-        // Parse the selected date string (e.g. '2024-05-25')
-        const selected = new Date(selectedDate)
-
-        // Set time to start of day (local)
         const start = new Date(`${selectedDate}T00:00:00.000Z`)
-
-        start.setHours(0, 0, 0, 0)
-
-        // Set time to end of day
         const end = new Date(`${selectedDate}T23:59:59.999Z`)
-        end.setHours(23, 59, 59, 999)
-
-        console.log('Filtering between:', start.toISOString(), 'and', end.toISOString())
-
-        query.date = {
-          $gte: start,
-          $lte: end
-        }
+        query.date = { $gte: start, $lte: end }
       }
 
-      console.log('API Query Params:', req.query)
-      console.log('MongoDB Query Object:', query)
+      const pageNum = parseInt(page as string, 10)
+      const size = parseInt(pageSize as string, 10)
+      const skip = (pageNum - 1) * size
+
+      const totalCount = await news.countDocuments(query)
+
       const result = await news
         .find(query)
         .sort({ date: -1 })
+        .skip(skip)
+        .limit(size)
         .toArray()
 
-      res.status(200).json(result)
+      res.status(200).json({
+        news: result,
+        totalCount,
+        totalPages: Math.ceil(totalCount / size),
+        currentPage: pageNum
+      })
     } else {
       res.setHeader('Allow', ['GET'])
       res.status(405).end(`Method ${req.method} Not Allowed`)

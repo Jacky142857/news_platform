@@ -13,14 +13,6 @@ export interface News {
   updatedAt: Date
 }
 
-export interface Researcher {
-  _id?: string
-  name: string
-  email: string
-  department: string
-  createdAt: Date
-}
-
 export interface NewsFilters {
   researcher?: string
   startDate?: Date

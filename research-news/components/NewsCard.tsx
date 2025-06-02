@@ -5,6 +5,7 @@ import { News } from '../lib/types'
 interface NewsCardProps {
   news: News
   onUpdateReadStatus: (newsId: string, isRead: boolean) => void
+  onMarkImportant: (newsId: string, isImportant: boolean) => void
 }
 
 function formatSummary(summary: string): string {
@@ -13,7 +14,7 @@ function formatSummary(summary: string): string {
   return formatted
 }
 
-export default function NewsCard({ news, onUpdateReadStatus }: NewsCardProps) {
+export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant }: NewsCardProps) {
   const [showSummaryPopup, setShowSummaryPopup] = useState(false)
 
   const handleMarkAsRead = () => {
@@ -22,6 +23,10 @@ export default function NewsCard({ news, onUpdateReadStatus }: NewsCardProps) {
 
   const handleMarkAsUnread = () => {
     onUpdateReadStatus(news._id, false)
+  }
+
+  const handleMarkAsImportant = () => {
+    onMarkImportant(news._id, !news.isImportant)
   }
 
   const handleOpenLink = () => {
@@ -53,7 +58,7 @@ export default function NewsCard({ news, onUpdateReadStatus }: NewsCardProps) {
               <span>{format(new Date(news.date), 'MMM dd, yyyy')}</span>
             </div>
 
-            <div className="flex gap-2 lg:mt-auto">
+            <div className="flex gap-2 flex-wrap lg:mt-auto">
               {news.isRead ? (
                 <button
                   onClick={handleMarkAsUnread}
@@ -69,15 +74,25 @@ export default function NewsCard({ news, onUpdateReadStatus }: NewsCardProps) {
                   Mark as Read
                 </button>
               )}
-              
-              {/* Summary button - only visible on small screens */}
+
+              <button
+                onClick={handleMarkAsImportant}
+                className={`px-3 py-1 text-xs rounded ${
+                  news.isImportant
+                    ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {news.isImportant ? 'Unmark Important' : 'Mark as Important'}
+              </button>
+
               <button
                 onClick={toggleSummaryPopup}
                 className="lg:hidden px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
               >
                 Summary
               </button>
-              
+
               <button
                 onClick={handleOpenLink}
                 className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
@@ -136,4 +151,7 @@ export default function NewsCard({ news, onUpdateReadStatus }: NewsCardProps) {
       )}
     </div>
   )
+
+
+
 }

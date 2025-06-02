@@ -14,11 +14,17 @@ interface NewsListProps {
 export default function NewsList({ filters }: NewsListProps) {
   const [news, setNews] = useState<News[]>([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [pageSize] = useState(50)
+  const [totalPages, setTotalPages] = useState(1) 
 
   useEffect(() => {
-    console.log('Filters passed to NewsList:', filters)
-    fetchNews()
+    setPage(1)
   }, [filters])
+
+  useEffect(() => {
+    fetchNews()
+  }, [filters, page])
 
   const fetchNews = async () => {
     setLoading(true)
@@ -26,7 +32,9 @@ export default function NewsList({ filters }: NewsListProps) {
       const params = new URLSearchParams({
         researcher: filters.researcher,
         showRead: filters.showRead.toString(),
-        showImportant: filters.showImportant.toString()
+        showImportant: filters.showImportant.toString(),
+        page: page.toString(),
+        pageSize: pageSize.toString()
       })
 
       if (filters.selectedDate) {
@@ -35,7 +43,8 @@ export default function NewsList({ filters }: NewsListProps) {
       
       const response = await fetch(`/api/news?${params}`)
       const data = await response.json()
-      setNews(data)
+      setNews(data.news)
+      setTotalPages(data.totalPages)
     } catch (error) {
       console.error('Error fetching news:', error)
     } finally {
@@ -102,8 +111,23 @@ export default function NewsList({ filters }: NewsListProps) {
           key={item._id}
           news={item}
           onUpdateReadStatus={handleUpdateReadStatus}
+          onMarkImportant={handleToggleImportant}
         />
       ))}
+      <div className="flex justify-center items-center gap-2 mt-6 flex-wrap">
+        {Array.from({ length: totalPages }, (_, i) => (
+          <button
+            key={i + 1}
+            onClick={() => setPage(i + 1)}
+            className={`px-3 py-1 border rounded ${
+              page === i + 1 ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'
+            } hover:bg-blue-700 hover:text-white transition-colors`}
+          >
+            {i + 1}
+          </button>
+        ))}
+      </div>
     </div>
+    
   )
 }
