@@ -7,6 +7,12 @@ interface NewsCardProps {
   onUpdateReadStatus: (newsId: string, isRead: boolean) => void
 }
 
+function formatSummary(summary: string): string {
+  let formatted = summary.replace(/\*\*(.*?)\*\*/g, '<span style="color: darkgreen;">$1</span>')
+  formatted = formatted.replace(/\*(.*?)\*/g, '<span style="color: darkred;">$1</span>')
+  return formatted
+}
+
 export default function NewsCard({ news, onUpdateReadStatus }: NewsCardProps) {
   const [showSummaryPopup, setShowSummaryPopup] = useState(false)
 
@@ -93,9 +99,10 @@ export default function NewsCard({ news, onUpdateReadStatus }: NewsCardProps) {
               </button>
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed line-clamp-6">
-                {news.summary}
-              </p>
+              <div
+                className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed line-clamp-6"
+                dangerouslySetInnerHTML={{ __html: formatSummary(news.summary) }}
+              ></div>
             </div>
           </div>
         </div>
@@ -112,9 +119,10 @@ export default function NewsCard({ news, onUpdateReadStatus }: NewsCardProps) {
             onClick={(e) => e.stopPropagation()}
           >
             <h4 className="text-lg font-semibold mb-4 text-gray-900">Full Summary</h4>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed mb-4">
-              {news.summary}
-            </p>
+            <div
+              className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed mb-4"
+              dangerouslySetInnerHTML={{ __html: formatSummary(news.summary) }}
+            ></div>
             <div className="text-right">
               <button
                 onClick={toggleSummaryPopup}
