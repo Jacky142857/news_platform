@@ -55,7 +55,7 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant }: 
             </p>
 
             <div className="text-xs text-gray-500 mb-3">
-              <span>{format(new Date(news.date), 'MMM dd, yyyy')}</span>
+              <span>{news.query}</span>
             </div>
 
             <div className="flex gap-2 flex-wrap lg:mt-auto">
@@ -151,7 +151,4 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant }: 
       )}
     </div>
   )
-
-
-
 }

@@ -42,6 +42,8 @@ export default function Home() {
             onShowImportantChange={() => {}}
             selectedDate = {selectdDate}
             onSelectedDateChange = {setSelectedDate}
+            selectedQuery={""}
+            onQueryChange={() => {}}
           />
         </div>
       </main>

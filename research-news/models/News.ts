@@ -21,6 +21,7 @@ const NewsSchema: Schema = new Schema({
   link: { type: String, required: true },
   date: { type: Date, required: true },
   researcher: { type: String, required: true },
+  query: {type: String, required: false},
   isRead: { type: Boolean, default: false },
   isImportant: { type: Boolean, default: false },
   readDate: { type: Date },

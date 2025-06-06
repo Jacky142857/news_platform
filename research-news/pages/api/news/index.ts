@@ -10,7 +10,7 @@ export default async function handler(
     const db = client.db('research_news')
     const news = db.collection('news')
     if (req.method === 'GET') {
-      const { researcher, showRead, showImportant, selectedDate, page = '1', pageSize='10' } = req.query
+      const { researcher, showRead, showImportant, selectedDate, selectedQuery, page = '1', pageSize='10' } = req.query
 
       const query: any = {}
 
@@ -36,6 +36,15 @@ export default async function handler(
         const start = new Date(`${selectedDate}T00:00:00.000Z`)
         const end = new Date(`${selectedDate}T23:59:59.999Z`)
         query.date = { $gte: start, $lte: end }
+      }
+
+      // Query filter - search in title and content
+      if (selectedQuery && typeof selectedQuery === 'string' && selectedQuery.trim() !== '') {
+        const searchRegex = new RegExp(selectedQuery.trim(), 'i') // Case-insensitive search
+        query.$or = [
+          { title: { $regex: searchRegex } },
+          { content: { $regex: searchRegex } }
+        ]
       }
 
       const pageNum = parseInt(page as string, 10)

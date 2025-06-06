@@ -8,6 +8,7 @@ interface NewsListProps {
     showRead: boolean
     showImportant: boolean
     selectedDate: string
+    selectedQuery: string
   }
 }
 
@@ -39,6 +40,10 @@ export default function NewsList({ filters }: NewsListProps) {
 
       if (filters.selectedDate) {
         params.append('selectedDate', filters.selectedDate)
+      }
+
+      if (filters.selectedQuery) {
+        params.append('selectedQuery', filters.selectedQuery)
       }
       
       const response = await fetch(`/api/news?${params}`)
