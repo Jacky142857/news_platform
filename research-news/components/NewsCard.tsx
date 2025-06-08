@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { format } from 'date-fns'
 import { News } from '../lib/types'
 
@@ -6,6 +6,15 @@ interface NewsCardProps {
   news: News
   onUpdateReadStatus: (newsId: string, isRead: boolean) => void
   onMarkImportant: (newsId: string, isImportant: boolean) => void
+  onUpdateHighlights?: (newsId: string, highlights: Highlight[]) => void
+}
+
+interface Highlight {
+  id: string
+  start: number
+  end: number
+  text: string
+  createdAt?: Date
 }
 
 function formatSummary(summary: string): string {
@@ -14,8 +23,88 @@ function formatSummary(summary: string): string {
   return formatted
 }
 
-export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant }: NewsCardProps) {
+// Function to merge overlapping highlights
+function mergeHighlights(highlights: Highlight[]): Highlight[] {
+  if (highlights.length <= 1) return highlights
+
+  const sorted = [...highlights].sort((a, b) => a.start - b.start)
+  const merged: Highlight[] = []
+  let current = sorted[0]
+
+  for (let i = 1; i < sorted.length; i++) {
+    const next = sorted[i]
+    
+    if (current.end >= next.start) {
+      // Overlapping or adjacent - merge them
+      current = {
+        ...current,
+        end: Math.max(current.end, next.end),
+        text: current.text // Keep the first highlight's text for simplicity
+      }
+    } else {
+      // No overlap - add current to merged and move to next
+      merged.push(current)
+      current = next
+    }
+  }
+  
+  merged.push(current)
+  return merged
+}
+
+// Function to apply highlights to text - optimized version
+function applyHighlights(text: string, highlights: Highlight[]): string {
+  if (highlights.length === 0) return text
+
+  const mergedHighlights = mergeHighlights(highlights)
+  
+  // Use array for better performance than string concatenation
+  const parts: string[] = []
+  let lastIndex = 0
+
+  mergedHighlights.forEach(highlight => {
+    // Add text before highlight
+    if (highlight.start > lastIndex) {
+      parts.push(text.slice(lastIndex, highlight.start))
+    }
+    // Add highlighted text
+    parts.push(`<mark style="background-color: #fef08a; font-weight: bold;">${text.slice(highlight.start, highlight.end)}</mark>`)
+    lastIndex = highlight.end
+  })
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex))
+  }
+
+  return parts.join('')
+}
+
+export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, onUpdateHighlights }: NewsCardProps) {
   const [showSummaryPopup, setShowSummaryPopup] = useState(false)
+  const [highlightMode, setHighlightMode] = useState(false)
+  const [highlights, setHighlights] = useState<Highlight[]>([])
+  const [selectedText, setSelectedText] = useState<{text: string, start: number, end: number} | null>(null)
+  const summaryRef = useRef<HTMLDivElement>(null)
+
+  // Initialize highlights from news data
+  useEffect(() => {
+    if (news.highlights && Array.isArray(news.highlights)) {
+      setHighlights(news.highlights)
+    }
+  }, [news.highlights])
+
+  // Persist highlights to database
+  const persistHighlights = useCallback(async (newHighlights: Highlight[]) => {
+    if (onUpdateHighlights) {
+      try {
+        await onUpdateHighlights(news._id, newHighlights)
+      } catch (error) {
+        console.error('Failed to persist highlights:', error)
+        // Optionally show user feedback about the error
+      }
+    }
+  }, [news._id, onUpdateHighlights])
 
   const handleMarkAsRead = () => {
     onUpdateReadStatus(news._id, true)
@@ -35,7 +124,108 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant }: 
 
   const toggleSummaryPopup = () => {
     setShowSummaryPopup(!showSummaryPopup)
+    // Reset highlight mode when closing popup
+    if (showSummaryPopup) {
+      setHighlightMode(false)
+      setSelectedText(null)
+    }
   }
+
+  const toggleHighlightMode = () => {
+    setHighlightMode(!highlightMode)
+    setSelectedText(null)
+    
+    // Clear any existing selection
+    if (window.getSelection) {
+      window.getSelection()?.removeAllRanges()
+    }
+  }
+
+  const handleTextSelection = useCallback(() => {
+    if (!highlightMode || !summaryRef.current) return
+
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return
+
+    const range = selection.getRangeAt(0)
+    const selectedText = selection.toString().trim()
+    
+    if (selectedText.length === 0) return
+
+    // Optimized position calculation
+    const textContent = summaryRef.current.textContent || ''
+    
+    // Use a more efficient method to find start position
+    const preCaretRange = range.cloneRange()
+    preCaretRange.selectNodeContents(summaryRef.current)
+    preCaretRange.setEnd(range.startContainer, range.startOffset)
+    const start = preCaretRange.toString().length
+
+    setSelectedText({
+      text: selectedText,
+      start: start,
+      end: start + selectedText.length
+    })
+  }, [highlightMode])
+
+  // Handle touch selection for mobile devices
+  const handleTouchEnd = useCallback(() => {
+    // Reduced delay and use requestAnimationFrame for better performance
+    requestAnimationFrame(() => {
+      handleTextSelection()
+    })
+  }, [handleTextSelection])
+
+  const confirmHighlight = () => {
+    if (!selectedText) return
+
+    const newHighlight: Highlight = {
+      id: Date.now().toString(),
+      start: selectedText.start,
+      end: selectedText.end,
+      text: selectedText.text,
+      createdAt: new Date()
+    }
+
+    const updatedHighlights = mergeHighlights([...highlights, newHighlight])
+    setHighlights(updatedHighlights)
+    persistHighlights(updatedHighlights)
+    setSelectedText(null)
+    
+    // Clear selection
+    if (window.getSelection) {
+      window.getSelection()?.removeAllRanges()
+    }
+  }
+
+  const clearAllHighlights = () => {
+    setHighlights([])
+    persistHighlights([])
+  }
+
+  const cancelSelection = () => {
+    setSelectedText(null)
+    if (window.getSelection) {
+      window.getSelection()?.removeAllRanges()
+    }
+  }
+
+  // Get the text content for highlighting (plain text without HTML formatting)
+  const getPlainTextSummary = (summary: string): string => {
+    // Remove markdown formatting for plain text processing
+    return summary.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1')
+  }
+
+  // Get formatted summary with highlights applied - memoized for performance
+  const getFormattedSummaryWithHighlights = useCallback((): string => {
+    const plainText = getPlainTextSummary(news.summary)
+    const highlightedText = applyHighlights(plainText, highlights)
+    
+    // Apply original formatting on top of highlights
+    let formatted = highlightedText.replace(/\*\*(.*?)\*\*/g, '<span style="color: darkgreen;">$1</span>')
+    formatted = formatted.replace(/\*(.*?)\*/g, '<span style="color: darkred;">$1</span>')
+    return formatted
+  }, [news.summary, highlights])
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -133,11 +323,88 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant }: 
             className="bg-white rounded-lg shadow-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <h4 className="text-lg font-semibold mb-4 text-gray-900">Full Summary</h4>
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="text-lg font-semibold text-gray-900">Full Summary</h4>
+              <div className="flex gap-2">
+                <button
+                  onClick={toggleHighlightMode}
+                  className={`px-3 py-1 text-xs rounded transition-colors ${
+                    highlightMode
+                      ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                      : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                  }`}
+                >
+                  {highlightMode ? 'Exit Highlight' : 'Highlight Text'}
+                </button>
+              </div>
+            </div>
+
+            {highlightMode && (
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800 mb-2">
+                  <span className="hidden sm:inline">Highlight mode is active. Select text to highlight it.</span>
+                  <span className="sm:hidden">Highlight mode is active. Tap and hold to select text, then use the confirm button.</span>
+                </p>
+                {selectedText && (
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="text-xs text-gray-600 mb-2 sm:mb-0 sm:mr-4 flex-1">
+                      Selected: "{selectedText.text.length > 50 ? selectedText.text.substring(0, 50) + '...' : selectedText.text}"
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={confirmHighlight}
+                        className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 flex-1 sm:flex-none"
+                      >
+                        Confirm Highlight
+                      </button>
+                      <button
+                        onClick={cancelSelection}
+                        className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 flex-1 sm:flex-none"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div
-              className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed mb-4"
-              dangerouslySetInnerHTML={{ __html: formatSummary(news.summary) }}
+              ref={summaryRef}
+              className={`text-sm text-gray-700 whitespace-pre-wrap leading-relaxed mb-4 ${
+                highlightMode ? 'select-text cursor-text' : ''
+              }`}
+              style={{
+                WebkitUserSelect: highlightMode ? 'text' : 'auto',
+                userSelect: highlightMode ? 'text' : 'auto',
+                WebkitTouchCallout: highlightMode ? 'default' : 'none',
+                // Optimize rendering performance
+                willChange: highlightMode ? 'contents' : 'auto',
+                transform: 'translateZ(0)' // Force hardware acceleration
+              }}
+              dangerouslySetInnerHTML={{ 
+                __html: highlights.length > 0 
+                  ? getFormattedSummaryWithHighlights()
+                  : formatSummary(news.summary)
+              }}
+              onMouseUp={handleTextSelection}
+              onTouchEnd={handleTouchEnd}
             ></div>
+
+            {highlights.length > 0 && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <h5 className="text-sm font-medium text-blue-800 mb-2">
+                  Highlights ({highlights.length})
+                </h5>
+                <button
+                  onClick={clearAllHighlights}
+                  className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200"
+                >
+                  Clear All Highlights
+                </button>
+              </div>
+            )}
+
             <div className="text-right">
               <button
                 onClick={toggleSummaryPopup}

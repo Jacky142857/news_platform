@@ -1,6 +1,15 @@
 import React, { useEffect, useState } from 'react'
 import { News } from '../lib/types'
 import NewsCard from './NewsCard'
+import { updateNewsHighlights, debouncedUpdateHighlights } from '../lib/highlightUtils'
+
+interface IHighlight {
+  id: string
+  start: number
+  end: number
+  text: string
+  createdAt?: Date
+}
 
 interface NewsListProps {
   filters: {
@@ -17,16 +26,16 @@ export default function NewsList({ filters }: NewsListProps) {
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [pageSize] = useState(50)
-  const [totalPages, setTotalPages] = useState(1) 
-
+  const [totalPages, setTotalPages] = useState(1)
+    
   useEffect(() => {
     setPage(1)
   }, [filters])
-
+ 
   useEffect(() => {
     fetchNews()
   }, [filters, page])
-
+ 
   const fetchNews = async () => {
     setLoading(true)
     try {
@@ -37,15 +46,15 @@ export default function NewsList({ filters }: NewsListProps) {
         page: page.toString(),
         pageSize: pageSize.toString()
       })
-
+ 
       if (filters.selectedDate) {
         params.append('selectedDate', filters.selectedDate)
       }
-
+ 
       if (filters.selectedQuery) {
         params.append('selectedQuery', filters.selectedQuery)
       }
-      
+             
       const response = await fetch(`/api/news?${params}`)
       const data = await response.json()
       setNews(data.news)
@@ -56,24 +65,24 @@ export default function NewsList({ filters }: NewsListProps) {
       setLoading(false)
     }
   }
-
+ 
   const handleUpdateReadStatus = async (newsId: string, isRead: boolean) => {
     try {
       await fetch(`/api/news/${newsId}/read`, {
-        method: 'PATCH', 
-        headers: {
+        method: 'PATCH',
+         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ isRead })
       })
-      
+             
       // Simply refetch the data to ensure correct filtering
       fetchNews()
     } catch (error) {
       console.error('Error marking as read:', error)
     }
   }
-
+ 
   const handleToggleImportant = async (newsId: string, isImportant: boolean) => {
     try {
       await fetch(`/api/news/${newsId}/important`, {
@@ -83,7 +92,7 @@ export default function NewsList({ filters }: NewsListProps) {
         },
         body: JSON.stringify({ isImportant })
       })
-      
+             
       // Update the item in place since importance filtering doesn't need immediate re-filtering
       setNews(prev => prev.map(item =>
         item._id === newsId ? { ...item, isImportant } : item
@@ -93,6 +102,39 @@ export default function NewsList({ filters }: NewsListProps) {
     }
   }
 
+  // Handle highlight updates with debouncing to avoid too many API calls
+  const handleUpdateHighlights = async (newsId: string, highlights: IHighlight[]) => {
+    try {
+      // Use debounced update to avoid excessive API calls during rapid highlighting
+      await debouncedUpdateHighlights(newsId, highlights, 800)
+      console.log('Highlights updated successfully for news:', newsId)
+      
+      // Update the local state to reflect the changes immediately in the UI
+      setNews(prev => prev.map(item =>
+        item._id === newsId ? { ...item, highlights } : item
+      ))
+    } catch (error) {
+      console.error('Failed to update highlights:', error)
+      // You could show a toast notification here
+      // toast.error('Failed to save highlights')
+    }
+  }
+
+  // Alternative: Immediate update (use this if you prefer instant persistence)
+  const handleImmediateUpdateHighlights = async (newsId: string, highlights: IHighlight[]) => {
+    try {
+      await updateNewsHighlights(newsId, highlights)
+      console.log('Highlights updated immediately for news:', newsId)
+      
+      // Update the local state to reflect the changes immediately in the UI
+      setNews(prev => prev.map(item =>
+        item._id === newsId ? { ...item, highlights } : item
+      ))
+    } catch (error) {
+      console.error('Failed to update highlights:', error)
+    }
+  }
+ 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -100,7 +142,7 @@ export default function NewsList({ filters }: NewsListProps) {
       </div>
     )
   }
-
+ 
   if (news.length === 0) {
     return (
       <div className="text-center text-gray-500 mt-8">
@@ -108,7 +150,7 @@ export default function NewsList({ filters }: NewsListProps) {
       </div>
     )
   }
-
+ 
   return (
     <div className="space-y-4">
       {news.map((item) => (
@@ -117,6 +159,8 @@ export default function NewsList({ filters }: NewsListProps) {
           news={item}
           onUpdateReadStatus={handleUpdateReadStatus}
           onMarkImportant={handleToggleImportant}
+          onUpdateHighlights={handleUpdateHighlights} // Use debounced version
+          // onUpdateHighlights={handleImmediateUpdateHighlights} // Or use immediate version
         />
       ))}
       <div className="flex justify-center items-center gap-2 mt-6 flex-wrap">
@@ -133,6 +177,6 @@ export default function NewsList({ filters }: NewsListProps) {
         ))}
       </div>
     </div>
-    
+       
   )
 }
