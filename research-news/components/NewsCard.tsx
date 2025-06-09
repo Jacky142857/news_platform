@@ -17,11 +17,14 @@ interface Highlight {
   createdAt?: Date
 }
 
-function formatSummary(summary: string): string {
+function formatSummary(summary: string | null): string {
+  if (!summary) return "<i>No summary available yet.</i>"
+
   let formatted = summary.replace(/\*\*(.*?)\*\*/g, '<span style="color: darkgreen;">$1</span>')
   formatted = formatted.replace(/\*(.*?)\*/g, '<span style="color: darkred;">$1</span>')
   return formatted
 }
+
 
 // Function to merge overlapping highlights
 function mergeHighlights(highlights: Highlight[]): Highlight[] {
