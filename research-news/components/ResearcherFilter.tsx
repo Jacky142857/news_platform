@@ -100,6 +100,25 @@ export default function ResearcherFilter({
     }
   }, [])
 
+  useEffect(() => {
+    console.log('Filtering queries:', {
+      queryInputValue,
+      queriesLength: queries.length,
+      filteredLength: filteredQueries.length
+    })
+    
+    if (queryInputValue.trim() === '') {
+      setFilteredQueries(queries)
+    } else {
+      const filtered = queries.filter(query =>
+        query.toLowerCase().includes(queryInputValue.toLowerCase())
+      )
+      setFilteredQueries(filtered)
+    }
+  }, [queryInputValue, queries])
+
+
+
   const fetchResearchers = async () => {
     try {
       setLoading(true)
@@ -362,7 +381,7 @@ export default function ResearcherFilter({
             </div>
           </div>
 
-          {/* Query Filter */}
+          {/* Query Filter - Fixed Version */}
           <div className="flex items-center border border-gray-200 rounded overflow-hidden bg-white hover:border-gray-300 transition-colors relative">
             <div className="text-gray-600 flex-shrink-0 px-3 py-2 border-r border-gray-200 bg-gray-50">
               <SearchIcon />
@@ -393,31 +412,6 @@ export default function ResearcherFilter({
                   <SearchIcon />
                 </div>
               )}
-              
-              {/* Dropdown with fixed z-index */}
-              {showQueryDropdown && !queriesLoading && !queriesError && (
-                <div
-                  ref={dropdownRef}
-                  className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-y-auto"
-                >
-                  {filteredQueries.length > 0 ? (
-                    filteredQueries.map((query, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleQuerySelect(query)}
-                        className="w-full px-3 py-2 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0 text-gray-700 text-sm font-medium transition-colors"
-                        type="button"
-                      >
-                        {query}
-                      </button>
-                    ))
-                  ) : (
-                    <div className="px-3 py-2 text-gray-500 text-sm">
-                      {selectedQuery.trim() ? 'No matching queries found' : 'No queries available'}
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
             
             {queriesLoading && (
@@ -430,7 +424,45 @@ export default function ResearcherFilter({
             {queriesError && (
               <div className="absolute -bottom-6 left-0 text-xs text-red-500">Error loading queries</div>
             )}
+            
+            {/* Fixed Dropdown - moved outside and positioned properly */}
           </div>
+
+          {/* Dropdown positioned outside the input container */}
+          {showQueryDropdown && !queriesLoading && !queriesError && (
+            <div
+              ref={dropdownRef}
+              className="absolute bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto min-w-0"
+              style={{
+                zIndex: 9999,
+                top: queryInputRef.current ? queryInputRef.current.getBoundingClientRect().bottom + window.scrollY + 4 : '100%',
+                left: queryInputRef.current ? queryInputRef.current.getBoundingClientRect().left + window.scrollX : 0,
+                width: queryInputRef.current ? queryInputRef.current.getBoundingClientRect().width : '100%',
+                position: 'absolute'
+              }}
+            >
+              {filteredQueries.length > 0 ? (
+                filteredQueries.map((query, index) => (
+                  <button
+                    key={index}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleQuerySelect(query)
+                    }}
+                    className="w-full px-3 py-2 text-left hover:bg-blue-50 focus:bg-blue-50 focus:outline-none border-b border-gray-100 last:border-b-0 text-gray-700 text-sm font-medium transition-colors block"
+                    type="button"
+                  >
+                    {query}
+                  </button>
+                ))
+              ) : (
+                <div className="px-3 py-2 text-gray-500 text-sm">
+                  {queryInputValue.trim() ? 'No matching queries found' : 'No queries available'}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Date Filter */}
           <div className="flex items-center border border-gray-200 rounded overflow-hidden bg-white hover:border-gray-300 transition-colors">
