@@ -4,6 +4,7 @@ export interface News {
   content: string
   summary: string
   link: string
+  query: string
   date: Date
   researcher: string
   isRead: boolean

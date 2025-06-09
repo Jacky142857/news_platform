@@ -3,7 +3,8 @@ import { News } from '../lib/types'
 import NewsCard from './NewsCard'
 import { updateNewsHighlights, debouncedUpdateHighlights } from '../lib/highlightUtils'
 
-interface IHighlight {
+// Define the Highlight interface to match what NewsCard expects
+interface Highlight {
   id: string
   start: number
   end: number
@@ -103,15 +104,21 @@ export default function NewsList({ filters }: NewsListProps) {
   }
 
   // Handle highlight updates with debouncing to avoid too many API calls
-  const handleUpdateHighlights = async (newsId: string, highlights: IHighlight[]) => {
+  const handleUpdateHighlights = async (newsId: string, highlights: Highlight[]) => {
     try {
+      // Convert highlights to the format expected by the API (ensure createdAt is present)
+      const apiHighlights = highlights.map(h => ({
+        ...h,
+        createdAt: h.createdAt || new Date()
+      }))
+      
       // Use debounced update to avoid excessive API calls during rapid highlighting
-      await debouncedUpdateHighlights(newsId, highlights, 800)
+      await debouncedUpdateHighlights(newsId, apiHighlights, 800)
       console.log('Highlights updated successfully for news:', newsId)
       
       // Update the local state to reflect the changes immediately in the UI
       setNews(prev => prev.map(item =>
-        item._id === newsId ? { ...item, highlights } : item
+        item._id === newsId ? { ...item, highlights: apiHighlights } : item
       ))
     } catch (error) {
       console.error('Failed to update highlights:', error)
@@ -121,14 +128,20 @@ export default function NewsList({ filters }: NewsListProps) {
   }
 
   // Alternative: Immediate update (use this if you prefer instant persistence)
-  const handleImmediateUpdateHighlights = async (newsId: string, highlights: IHighlight[]) => {
+  const handleImmediateUpdateHighlights = async (newsId: string, highlights: Highlight[]) => {
     try {
-      await updateNewsHighlights(newsId, highlights)
+      // Convert highlights to the format expected by the API (ensure createdAt is present)
+      const apiHighlights = highlights.map(h => ({
+        ...h,
+        createdAt: h.createdAt || new Date()
+      }))
+      
+      await updateNewsHighlights(newsId, apiHighlights)
       console.log('Highlights updated immediately for news:', newsId)
       
       // Update the local state to reflect the changes immediately in the UI
       setNews(prev => prev.map(item =>
-        item._id === newsId ? { ...item, highlights } : item
+        item._id === newsId ? { ...item, highlights: apiHighlights } : item
       ))
     } catch (error) {
       console.error('Failed to update highlights:', error)

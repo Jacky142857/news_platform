@@ -95,8 +95,10 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
   }, [news.highlights])
 
   // Persist highlights to database
+  
+  // Persist highlights to database
   const persistHighlights = useCallback(async (newHighlights: Highlight[]) => {
-    if (onUpdateHighlights) {
+    if (onUpdateHighlights && news._id) {
       try {
         await onUpdateHighlights(news._id, newHighlights)
       } catch (error) {
@@ -107,15 +109,21 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
   }, [news._id, onUpdateHighlights])
 
   const handleMarkAsRead = () => {
-    onUpdateReadStatus(news._id, true)
+    if (news._id) {
+      onUpdateReadStatus(news._id, true)
+    }
   }
 
   const handleMarkAsUnread = () => {
-    onUpdateReadStatus(news._id, false)
+    if (news._id) {
+      onUpdateReadStatus(news._id, false)
+    }
   }
 
   const handleMarkAsImportant = () => {
-    onMarkImportant(news._id, !news.isImportant)
+    if (news._id) {
+      onMarkImportant(news._id, !news.isImportant)
+    }
   }
 
   const handleOpenLink = () => {
