@@ -31,11 +31,16 @@ export default function NewsList({ filters }: NewsListProps) {
     
   useEffect(() => {
     setPage(1)
-  }, [filters])
+    fetchNews()
+  }, [filters.researcher,
+      filters.showRead,
+      filters.showImportant,
+      filters.selectedDate,
+      filters.selectedQuery])
  
   useEffect(() => {
     fetchNews()
-  }, [filters, page])
+  }, [page])
  
   const fetchNews = async () => {
     setLoading(true)
