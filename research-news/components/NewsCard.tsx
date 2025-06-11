@@ -152,6 +152,23 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
     }
   }, [news._id, onUpdateHighlights])
 
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    // We only care about Shift
+    if (!e.shiftKey) return;
+
+    /*  Allow normal Shift-drag selection **only** when:
+        • the summary popup is visible   AND
+        • the user has clicked “Highlight Text”
+    */
+    if (showSummaryPopup && highlightMode) return;
+
+    // In every other situation, kill the native behaviour
+    e.preventDefault();
+    window.getSelection()?.removeAllRanges();
+  };
+
+
+
   // Handle Shift+Click to open summary popup
   const handleCardClick = (e: React.MouseEvent) => {
     if (e.shiftKey) {
@@ -309,6 +326,7 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
   return (
     <div 
       className="bg-white rounded-lg shadow-sm border border-gray-200 cursor-pointer md:hover:shadow-2xl md:hover:border-2 md:hover:border-gray-400 transition-all duration-200"
+      onMouseDown={handleMouseDown}
       onClick={handleCardClick}
       title="Shift+Click to open summary"
     >
