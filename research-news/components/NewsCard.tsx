@@ -89,14 +89,51 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
   const [highlights, setHighlights] = useState<Highlight[]>([])
   const [selectedText, setSelectedText] = useState<{text: string, start: number, end: number} | null>(null)
   const summaryRef = useRef<HTMLDivElement>(null)
+  const [isHovered, setIsHovered] = useState(false)
+  const [copied, setCopied] = useState(false)
 
+  useEffect(() => {
+    if (!isHovered) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.shiftKey && e.key.toLowerCase() === 'c') {
+      e.preventDefault();           // don’t let the browser treat it as ©
+
+      /* ─── copy & confirm ─── */
+      if (navigator.clipboard) {
+        navigator.clipboard
+          .writeText(news.link)
+          .then(() => {
+            window.alert('Link copied to clipboard ✅');
+          })
+          .catch(() => {
+            // fallback if Clipboard API isn’t available / permitted
+            window.prompt(
+              'Copy to clipboard: Ctrl+C / Cmd+C, then Enter',
+              news.link
+            );
+          });
+      }
+    }
+  };
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isHovered, news.link])
+
+  useEffect(() => {
+    if (!copied) return
+    const id = setTimeout(() => setCopied(false), 2000)
+    return () => clearTimeout(id)
+  }, [copied])
+  
   // Initialize highlights from news data
   useEffect(() => {
     if (news.highlights && Array.isArray(news.highlights)) {
       setHighlights(news.highlights)
     }
   }, [news.highlights])
-
+  
   useEffect(() => {
     if (showSummaryPopup) {
       // Store original overflow value
@@ -326,7 +363,10 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
   return (
     <div 
       className="bg-white rounded-lg shadow-sm border border-gray-200 cursor-pointer md:hover:shadow-2xl md:hover:border-2 md:hover:border-gray-400 transition-all duration-200"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       onMouseDown={handleMouseDown}
+
       onClick={handleCardClick}
       title="Shift+Click to open summary"
     >
