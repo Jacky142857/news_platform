@@ -74,18 +74,39 @@ export default function NewsList({ filters }: NewsListProps) {
  
   const handleUpdateReadStatus = async (newsId: string, isRead: boolean) => {
     try {
+      // Update local state immediately for instant UI feedback
+      setNews(prev => prev.map(item =>
+        item._id === newsId ? { ...item, isRead } : item
+      ))
+
+      // Make API call in background
       await fetch(`/api/news/${newsId}/read`, {
         method: 'PATCH',
-         headers: {
+        headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ isRead })
       })
-             
-      // Simply refetch the data to ensure correct filtering
-      fetchNews()
+
+      // Only refetch if the current filters would hide this item
+      // For example, if showRead is false and we just marked as read
+      if (!filters.showRead && isRead) {
+        // Item should be hidden, so refetch to remove it from view
+        fetchNews()
+      }
+      // If showRead is true or we marked as unread, no need to refetch
+      // since the item should remain visible with updated status
+      
     } catch (error) {
       console.error('Error marking as read:', error)
+      
+      // Revert the local state change on error
+      setNews(prev => prev.map(item =>
+        item._id === newsId ? { ...item, isRead: !isRead } : item
+      ))
+      
+      // Optionally show error message to user
+      // toast.error('Failed to update read status')
     }
   }
  
