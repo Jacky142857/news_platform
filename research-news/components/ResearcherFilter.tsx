@@ -286,7 +286,7 @@ export default function ResearcherFilter({
               <div className="flex items-center space-x-2 text-gray-600">
                 <UserIcon />
                 <span className="font-medium text-sm">
-                  {selectedResearcher === 'all' ? 'All Researchers' : selectedResearcher}
+                  {selectedResearcher === 'all' ? 'All Analysts' : selectedResearcher}
                 </span>
                 {selectedQuery && (
                   <>
@@ -302,7 +302,7 @@ export default function ResearcherFilter({
               <div className="text-gray-600">
                 <FilterIcon />
               </div>
-              <h2 className="text-lg font-semibold text-gray-900">Research Filters</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
               {activeFiltersCount > 0 && (
                 <div className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
                   {activeFiltersCount}
@@ -362,7 +362,7 @@ export default function ResearcherFilter({
                 className="w-full px-3 py-2 pr-8 bg-white border-0 text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 hover:bg-gray-50 transition-colors appearance-none"
                 disabled={loading}
               >
-                <option value="all">All Researchers</option>
+                <option value="all">All Analysts</option>
                 {loading ? (
                   <option disabled>Loading researchers...</option>
                 ) : error ? (

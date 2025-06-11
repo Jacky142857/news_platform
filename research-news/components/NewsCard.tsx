@@ -97,6 +97,20 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
     }
   }, [news.highlights])
 
+  useEffect(() => {
+    if (showSummaryPopup) {
+      // Store original overflow value
+      const originalStyle = window.getComputedStyle(document.body).overflow
+      // Prevent scrolling
+      document.body.style.overflow = 'hidden'
+      
+      // Cleanup function to restore scrolling
+      return () => {
+        document.body.style.overflow = originalStyle
+      }
+    }
+  }, [showSummaryPopup])
+
   // Keyboard event handler for Shift + H and Shift
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -256,6 +270,11 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
     if (window.getSelection) {
       window.getSelection()?.removeAllRanges()
     }
+
+    // Automatically mark as important when adding the FIRST highlight
+    if (highlights.length === 0 && !news.isImportant && news._id) {
+      onMarkImportant(news._id, true)
+    }
   }
 
   const clearAllHighlights = () => {
@@ -305,7 +324,7 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
             </div>
 
             <p className="text-sm text-gray-600 mb-2">
-              Researcher: <span className="font-medium">{news.researcher}</span>
+              Analyst: <span className="font-medium">{news.researcher}</span>
             </p>
 
             <div className="text-xs text-gray-500 mb-3">

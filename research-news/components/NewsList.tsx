@@ -28,6 +28,7 @@ export default function NewsList({ filters }: NewsListProps) {
   const [page, setPage] = useState(1)
   const [pageSize] = useState(50)
   const [totalPages, setTotalPages] = useState(1)
+  const [hasResults, setHasResults] = useState(true)
     
   useEffect(() => {
     setPage(1)
@@ -65,6 +66,7 @@ export default function NewsList({ filters }: NewsListProps) {
       const data = await response.json()
       setNews(data.news)
       setTotalPages(data.totalPages)
+      setHasResults(data.totalPages > 0)
     } catch (error) {
       console.error('Error fetching news:', error)
     } finally {
@@ -189,7 +191,7 @@ export default function NewsList({ filters }: NewsListProps) {
     )
   }
  
-  if (news.length === 0) {
+  if (!hasResults) {
     return (
       <div className="text-center text-gray-500 mt-8">
         <p>No news found matching your filters.</p>
@@ -199,30 +201,90 @@ export default function NewsList({ filters }: NewsListProps) {
  
   return (
     <div className="space-y-4">
-      {news.map((item) => (
-        <NewsCard
-          key={item._id}
-          news={item}
-          onUpdateReadStatus={handleUpdateReadStatus}
-          onMarkImportant={handleToggleImportant}
-          onUpdateHighlights={handleUpdateHighlights} // Use debounced version
-          // onUpdateHighlights={handleImmediateUpdateHighlights} // Or use immediate version
-        />
-      ))}
-      <div className="flex justify-center items-center gap-2 mt-6 flex-wrap">
-        {Array.from({ length: totalPages }, (_, i) => (
-          <button
-            key={i + 1}
-            onClick={() => setPage(i + 1)}
-            className={`px-3 py-1 border rounded ${
-              page === i + 1 ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'
-            } hover:bg-blue-700 hover:text-white transition-colors`}
-          >
-            {i + 1}
-          </button>
-        ))}
-      </div>
+      {/* Show news items if available on current page */}
+      {news.length > 0 ? (
+        news.map((item) => (
+          <NewsCard
+            key={item._id}
+            news={item}
+            onUpdateReadStatus={handleUpdateReadStatus}
+            onMarkImportant={handleToggleImportant}
+            onUpdateHighlights={handleUpdateHighlights}
+          />
+        ))
+      ) : (
+        /* Show message when current page is empty but other pages have results */
+        <div className="text-center text-gray-500 mt-8 mb-8">
+          <p>No news items on this page. Try navigating to other pages.</p>
+        </div>
+      )}
+
+      {/* Always show pagination if there are results across any pages */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-6 flex-wrap">
+          {/* Previous button */}
+          {page > 1 && (
+            <button
+              onClick={() => setPage(page - 1)}
+              className="px-3 py-1 border rounded bg-white text-blue-600 hover:bg-blue-700 hover:text-white transition-colors"
+            >
+              &lt;
+            </button>
+          )}
+
+          {/* Individual page numbers for pages 1-10 */}
+          {Array.from({ length: Math.min(10, totalPages) }, (_, i) => (
+            <button
+              key={i + 1}
+              onClick={() => setPage(i + 1)}
+              className={`px-3 py-1 border rounded ${
+                page === i + 1 ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'
+              } hover:bg-blue-700 hover:text-white transition-colors`}
+            >
+              {i + 1}
+            </button>
+          ))}
+
+          {/* Show ">" button for pages 11+ */}
+          {totalPages > 10 && (
+            <>
+              {/* Show ellipsis if current page is beyond page 10 */}
+              {page > 10 && (
+                <span className="px-2 text-gray-500">...</span>
+              )}
+              
+              {/* Show current page number if it's beyond page 10 */}
+              {page > 10 && (
+                <button
+                  className="px-3 py-1 border rounded bg-blue-600 text-white"
+                >
+                  {page}
+                </button>
+              )}
+
+              {/* Next button (>) */}
+              {page < totalPages && (
+                <button
+                  onClick={() => setPage(page + 1)}
+                  className="px-3 py-1 border rounded bg-white text-blue-600 hover:bg-blue-700 hover:text-white transition-colors"
+                >
+                  &gt;
+                </button>
+              )}
+            </>
+          )}
+
+          {/* Next button for when total pages <= 10 */}
+          {totalPages <= 10 && page < totalPages && (
+            <button
+              onClick={() => setPage(page + 1)}
+              className="px-3 py-1 border rounded bg-white text-blue-600 hover:bg-blue-700 hover:text-white transition-colors"
+            >
+              &gt;
+            </button>
+          )}
+        </div>
+      )}
     </div>
-       
   )
 }
