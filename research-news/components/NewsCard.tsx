@@ -97,8 +97,35 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
     }
   }, [news.highlights])
 
-  // Persist highlights to database
-  
+  // Keyboard event handler for Shift + H and Shift + Enter
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!showSummaryPopup) return
+
+      // Check if Shift + H is pressed to toggle highlight mode
+      if (e.shiftKey && e.key.toLowerCase() === 'h') {
+        e.preventDefault()
+        toggleHighlightMode()
+      }
+      
+      // Check if Shift + Enter is pressed to confirm highlight
+      if (e.shiftKey && e.key === 'Enter' && highlightMode && selectedText) {
+        e.preventDefault()
+        confirmHighlight()
+      }
+    }
+
+    // Add event listener when popup is open
+    if (showSummaryPopup) {
+      document.addEventListener('keydown', handleKeyDown)
+    }
+
+    // Cleanup event listener
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [showSummaryPopup, highlightMode, selectedText]) // Dependencies include selectedText for the confirm function
+
   // Persist highlights to database
   const persistHighlights = useCallback(async (newHighlights: Highlight[]) => {
     if (onUpdateHighlights && news._id) {
@@ -110,6 +137,26 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
       }
     }
   }, [news._id, onUpdateHighlights])
+
+  // Handle Shift+Click to open summary popup
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (e.shiftKey) {
+      e.preventDefault()
+      setShowSummaryPopup(true)
+    }
+  }
+  
+  // Handle Shift+Press (light tap without clicking) using pointer events
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.shiftKey) {
+      // Detect light press (force < 0.5) or normal press
+      // Force ranges from 0 (light touch) to 1 (maximum pressure)
+      if (e.force <= 0.5 || e.force === 0) {
+        e.preventDefault()
+        setShowSummaryPopup(true)
+      }
+    }
+  }
 
   const handleMarkAsRead = () => {
     if (news._id) {
@@ -239,7 +286,11 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
   }, [news.summary, highlights])
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+    <div 
+      className="bg-white rounded-lg shadow-sm border border-gray-200 cursor-pointer md:hover:shadow-2xl md:hover:border-2 md:hover:border-gray-400 transition-all duration-200"
+      onClick={handleCardClick}
+      title="Shift+Click to open summary"
+    >
       <div className="p-4 relative">
         {/* Main content layout - always flex on large screens */}
         <div className="lg:flex lg:gap-4 lg:h-full">
@@ -262,14 +313,20 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
             <div className="flex gap-2 flex-wrap lg:mt-auto">
               {news.isRead ? (
                 <button
-                  onClick={handleMarkAsUnread}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleMarkAsUnread()
+                  }}
                   className="px-3 py-1 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200"
                 >
                   Mark as Unread
                 </button>
               ) : (
                 <button
-                  onClick={handleMarkAsRead}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleMarkAsRead()
+                  }}
                   className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200"
                 >
                   Mark as Read
@@ -277,7 +334,10 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
               )}
 
               <button
-                onClick={handleMarkAsImportant}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleMarkAsImportant()
+                }}
                 className={`px-3 py-1 text-xs rounded ${
                   news.isImportant
                     ? 'bg-red-100 text-red-700 hover:bg-red-200'
@@ -288,14 +348,20 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
               </button>
 
               <button
-                onClick={toggleSummaryPopup}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleSummaryPopup()
+                }}
                 className="lg:hidden px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
               >
                 Summary
               </button>
 
               <button
-                onClick={handleOpenLink}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleOpenLink()
+                }}
                 className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
               >
                 Read Full Article
@@ -308,7 +374,10 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
             <div className="flex justify-between items-center mb-3">
               <h4 className="text-lg font-semibold text-gray-900">Summary</h4>
               <button
-                onClick={toggleSummaryPopup}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleSummaryPopup()
+                }}
                 className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
               >
                 Show More
@@ -344,6 +413,7 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
                       ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
                       : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
                   }`}
+                  title="Keyboard shortcut: Shift + H (desktop only)"
                 >
                   {highlightMode ? 'Exit Highlight' : 'Highlight Text'}
                 </button>
@@ -353,8 +423,8 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
             {highlightMode && (
               <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <p className="text-sm text-yellow-800 mb-2">
-                  <span className="hidden sm:inline">Highlight mode is active. Select text to highlight it.</span>
-                  <span className="sm:hidden">Highlight mode is active. Tap and hold to select text, then use the confirm button.</span>
+                  <span className="hidden sm:inline">Highlight mode is active. Select text to highlight it. Press Shift + H to toggle, Shift + Enter to confirm selection.</span>
+                  <span className="sm:hidden">Highlight mode is active. Tap and hold to select text, then use the confirm button below.</span>
                 </p>
                 {selectedText && (
                   <div className="flex flex-col sm:flex-row gap-2">
@@ -365,6 +435,7 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
                       <button
                         onClick={confirmHighlight}
                         className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 flex-1 sm:flex-none"
+                        title="Keyboard shortcut: Shift + Enter (desktop only)"
                       >
                         Confirm Highlight
                       </button>
