@@ -73,50 +73,49 @@ export default function NewsList({ filters }: NewsListProps) {
   }
  
   const handleUpdateReadStatus = async (newsId: string, isRead: boolean) => {
-    // Store original state for potential rollback
-    const originalNews = news
+    // Use a ref to track if the operation is in progress
+    const operationId = Date.now().toString()
     
     try {
-      // Update local state with filtering logic
-      setNews(prev => {
-        const updatedNews = prev.map(item =>
+      // Update state functionally to avoid stale closures
+      setNews(prevNews => {
+        const updatedNews = prevNews.map(item =>
           item._id === newsId ? { ...item, isRead } : item
         )
         
-        // Apply all current filters locally
+        // Apply filtering logic
         return updatedNews.filter(item => {
-          // Apply read filter
           if (!filters.showRead && item.isRead) return false
-          
-          // Apply importance filter  
           if (filters.showImportant && !item.isImportant) return false
-          
-          // Apply other filters as needed
-          // if (filters.researcher && item.researcher !== filters.researcher) return false
-          
           return true
         })
       })
 
-      // Make API call in background
-      await fetch(`/api/news/${newsId}/read`, {
+      // Make API call
+      const response = await fetch(`/api/news/${newsId}/read`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ isRead })
       })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
       
     } catch (error) {
       console.error('Error marking as read:', error)
       
-      // Revert to original state on error
-      setNews(originalNews)
+      // On error, refetch the entire list to ensure consistency
+      // This is safer than trying to revert complex state changes
+      fetchNews()
       
       // Optionally show error message
       // toast.error('Failed to update read status')
     }
   }
+
  
   const handleToggleImportant = async (newsId: string, isImportant: boolean) => {
     try {
