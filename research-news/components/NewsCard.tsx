@@ -97,7 +97,7 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
     }
   }, [news.highlights])
 
-  // Keyboard event handler for Shift + H and Shift + Enter
+  // Keyboard event handler for Shift + H and Shift
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!showSummaryPopup) return
@@ -109,7 +109,7 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
       }
       
       // Check if Shift + Enter is pressed to confirm highlight
-      if (e.shiftKey && e.key === 'Enter' && highlightMode && selectedText) {
+      if (e.shiftKey && highlightMode && selectedText) {
         e.preventDefault()
         confirmHighlight()
       }
@@ -149,14 +149,16 @@ export default function NewsCard({ news, onUpdateReadStatus, onMarkImportant, on
   // Handle Shift+Press (light tap without clicking) using pointer events
   const handlePointerDown = (e: React.PointerEvent) => {
     if (e.shiftKey) {
+      const force = (e as any).force ?? 0;
+
       // Detect light press (force < 0.5) or normal press
-      // Force ranges from 0 (light touch) to 1 (maximum pressure)
-      if (e.force <= 0.5 || e.force === 0) {
-        e.preventDefault()
-        setShowSummaryPopup(true)
+      if (force <= 0.5 || force === 0) {
+        e.preventDefault();
+        setShowSummaryPopup(true);
       }
     }
-  }
+  };
+
 
   const handleMarkAsRead = () => {
     if (news._id) {
