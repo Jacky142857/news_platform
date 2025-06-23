@@ -48,15 +48,18 @@ export default function ResearcherFilter({
     const date = new Date(dateString)
     const today = new Date()
     const yesterday = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1)
     
-    if (dateString === today.toISOString().slice(0, 10)) return 'Today'
-    if (dateString === yesterday.toISOString().slice(0, 10)) return 'Yesterday'
+    const todayUTC = today.toISOString().slice(0, 10)
+    const yesterdayUTC = yesterday.toISOString().slice(0, 10)
     
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric' 
+    if (dateString === todayUTC) return 'Today'
+    if (dateString === yesterdayUTC) return 'Yesterday'
+    
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
     })
   }
 
