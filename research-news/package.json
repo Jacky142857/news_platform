@@ -19,6 +19,7 @@
     "mongodb": "^6.16.0",
     "mongoose": "^7.8.7",
     "next": "^14.0.0",
+    "p-limit": "^6.2.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "react-swipeable": "^7.0.2",

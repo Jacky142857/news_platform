@@ -1,7 +1,8 @@
-// Save this as: pages/api/bing-scraper.ts
+// Save this as: pages/api/bing-scraper.ts 
 import { NextApiRequest, NextApiResponse } from 'next';
 import * as cheerio from 'cheerio';
 import clientPromise from '../../lib/mongodb'; // Adjust path as needed
+import pLimit from 'p-limit';
 
 interface NewsResult {
   query: string;
@@ -17,6 +18,20 @@ interface ApiResponse {
   error?: string;
   message?: string;
   mongoResult?: any;
+  batchResult?: BatchProcessResult;
+}
+
+interface BatchProcessResult {
+  totalQueries: number;
+  successfulQueries: number;
+  failedQueries: number;
+  totalArticlesInserted: number;
+  queryResults: Array<{
+    query: string;
+    success: boolean;
+    articlesCount: number;
+    error?: string;
+  }>;
 }
 
 interface MongoDocument {
@@ -175,13 +190,17 @@ async function fetchResults(keyword: string): Promise<NewsResult[]> {
   }
 }
 
-async function insertToMongoDB(query: string, results: NewsResult[]): Promise<any> {
+async function insertToMongoDB(researcher: string, query: string, results: NewsResult[]): Promise<any> {
   try {
     const client = await clientPromise;
     const db = client.db('research_news'); // Change if needed
     const collection = db.collection('news');
 
     const now = new Date();
+    
+    // First, remove existing articles for this researcher-query combination to avoid duplicates
+    await collection.deleteMany({ researcher, query });
+    
     const documents = results.map(result => ({
       query: query,
       title: result.title,
@@ -189,7 +208,7 @@ async function insertToMongoDB(query: string, results: NewsResult[]): Promise<an
       content: result.content || '',
       summary: '', // Default empty summary
       date: now, // You can extract date from the article if needed
-      researcher: 'Elon Musk', // Replace with dynamic value if needed
+      researcher: researcher,
       isRead: false,
       isImportant: false,
       createdAt: now,
@@ -197,8 +216,16 @@ async function insertToMongoDB(query: string, results: NewsResult[]): Promise<an
       highlights: []
     }));
 
+    if (documents.length === 0) {
+      return {
+        insertedCount: 0,
+        insertedIds: {},
+        acknowledged: true
+      };
+    }
+
     const resultInsert = await collection.insertMany(documents);
-    console.log(`Inserted ${resultInsert.insertedCount} documents.`);
+    console.log(`Inserted ${resultInsert.insertedCount} documents for ${researcher} - ${query}.`);
 
     return {
       insertedCount: resultInsert.insertedCount,
@@ -210,6 +237,61 @@ async function insertToMongoDB(query: string, results: NewsResult[]): Promise<an
     console.error('MongoDB insertion error:', error);
     throw error;
   }
+}
+
+async function processResearcherQueries(researcher: string): Promise<BatchProcessResult> {
+  const client = await clientPromise;
+  const db = client.db("research_news");
+  const collection = db.collection("researchers_queries_map");
+
+  const researcherDoc = await collection.findOne({ name: researcher });
+  const queries: string[] = researcherDoc?.queries || [];
+  if (queries.length === 0) {
+    console.warn(`No queries found for researcher "${researcher}"`);
+  }
+
+  const batchResult: BatchProcessResult = {
+    totalQueries: queries.length,
+    successfulQueries: 0,
+    failedQueries: 0,
+    totalArticlesInserted: 0,
+    queryResults: []
+  };
+
+  const limit = pLimit(5); // Limit to 5 concurrent promises
+
+  const tasks = queries.map(query =>
+    limit(async () => {
+      try {
+        console.log(`Fetching news for query: ${query}`);
+        const results = await fetchResults(query);
+        const mongoResult = await insertToMongoDB(researcher, query, results);
+
+        batchResult.successfulQueries++;
+        batchResult.totalArticlesInserted += mongoResult.insertedCount;
+        batchResult.queryResults.push({
+          query,
+          success: true,
+          articlesCount: mongoResult.insertedCount
+        });
+
+        console.log(`Successfully processed "${query}"`);
+      } catch (error) {
+        console.error(`Failed to process "${query}"`, error);
+        batchResult.failedQueries++;
+        batchResult.queryResults.push({
+          query,
+          success: false,
+          articlesCount: 0,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    })
+  );
+
+  await Promise.allSettled(tasks);
+
+  return batchResult;
 }
 
 export default async function handler(
@@ -228,12 +310,13 @@ export default async function handler(
 
   if (req.method === 'GET') {
     try {
-      const { q: query, save } = req.query;
+      const { q: query, save, researcher } = req.query;
 
+      // Single query processing (existing functionality)
       if (!query || typeof query !== 'string') {
         return res.status(400).json({
           success: false,
-          error: 'Query parameter "q" is required'
+          error: 'Query parameter "q" is required, or provide "researcher" parameter for batch processing'
         });
       }
 
@@ -245,7 +328,9 @@ export default async function handler(
       // Check if save parameter is present to save to MongoDB
       if (save === 'true' || save === '1') {
         try {
-          mongoResult = await insertToMongoDB(query, results);
+          // Use default researcher if not specified
+          const researcherName = typeof researcher === 'string' ? researcher : 'Elon Musk';
+          mongoResult = await insertToMongoDB(researcherName, query, results);
           console.log('Data successfully saved to MongoDB');
         } catch (mongoError) {
           console.error('Failed to save to MongoDB:', mongoError);
@@ -271,8 +356,33 @@ export default async function handler(
 
   if (req.method === 'POST') {
     try {
-      const { query, saveToDb = false } = req.body;
+      const { query, saveToDb = false, researcher, batchProcess = false } = req.body;
 
+      // Batch processing for researcher
+      if (batchProcess && researcher) {
+        console.log(`Processing batch POST request for researcher: ${researcher}`);
+        
+      if (batchProcess && researcher) {
+        console.log(`Processing batch POST request for researcher: ${researcher}`);
+        const batchResult = await processResearcherQueries(researcher);
+
+        return res.status(200).json({
+          success: true,
+          message: `Processed ${batchResult.totalQueries} queries for ${researcher}. Successfully inserted ${batchResult.totalArticlesInserted} articles.`,
+          batchResult
+        });
+      }
+
+        const batchResult = await processResearcherQueries(researcher);
+        
+        return res.status(200).json({
+          success: true,
+          message: `Processed ${batchResult.totalQueries} queries for ${researcher}. Successfully inserted ${batchResult.totalArticlesInserted} articles.`,
+          batchResult
+        });
+      }
+
+      // Single query processing
       if (!query || typeof query !== 'string') {
         return res.status(400).json({
           success: false,
@@ -288,7 +398,8 @@ export default async function handler(
       // Save to MongoDB if requested
       if (saveToDb) {
         try {
-          mongoResult = await insertToMongoDB(query, results);
+          const researcherName = researcher || 'Elon Musk';
+          mongoResult = await insertToMongoDB(researcherName, query, results);
           console.log('Data successfully saved to MongoDB');
         } catch (mongoError) {
           console.error('Failed to save to MongoDB:', mongoError);

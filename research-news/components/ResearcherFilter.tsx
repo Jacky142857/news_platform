@@ -136,7 +136,41 @@ export default function ResearcherFilter({
 
   const activeFiltersCount = getActiveFiltersCount()
 
+  const [isLoading, setIsLoading] = useState(false);
 
+  const handleRefetchResearcherQueries = async () => {
+    if (!selectedResearcher || selectedResearcher === 'all') {
+      alert("Please select a specific researcher.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/bing-scraper', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          researcher: selectedResearcher,
+          batchProcess: true
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert(`✅ Refetched ${data.batchResult?.totalArticlesInserted} articles for ${selectedResearcher}`);
+      } else {
+        alert(`❌ Failed: ${data.error}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('❌ An error occurred while refetching.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4">
@@ -406,6 +440,22 @@ export default function ResearcherFilter({
               Important Only
             </button>
           </div>
+
+
+          {selectedResearcher !== 'all' && (
+            <div className="flex items-center border rounded overflow-hidden">
+              <button
+                onClick={handleRefetchResearcherQueries}
+                disabled={isLoading}
+                className={`flex-shrink-0 px-3 py-2 border-r transition ${
+                  isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-gray-50 hover:bg-blue-100'
+                }`}
+              >
+                {isLoading ? 'Refetching...' : `Refetch All Queries for ${selectedResearcher}`}
+              </button>
+            </div>
+          )}
+
         </div>
       </div>
     </div>
