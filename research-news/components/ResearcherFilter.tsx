@@ -1,5 +1,19 @@
 import React, { useEffect, useState, useRef } from 'react'
 
+import { useResearchers } from '@/hooks/useResearchers'
+import { useQueries } from '@/hooks/useQueries'
+import { getPastFiveDays, formatDate } from '@/utils/dateUtils'
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  FilterIcon,
+  UserIcon,
+  SearchIcon,
+  XIcon,
+  CalendarIcon,
+  EyeIcon,
+  StarIcon
+} from '@/components/ui/Icons'
 interface ResearcherFilterProps {
   selectedResearcher: string
   onResearcherChange: (researcher: string) => void
@@ -25,48 +39,15 @@ export default function ResearcherFilter({
   selectedQuery,
   onQueryChange
 }: ResearcherFilterProps) {
-  const [researchers, setResearchers] = useState<string[]>([])
-  const [queries, setQueries] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
-  const [queriesLoading, setQueriesLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [queriesError, setQueriesError] = useState<string | null>(null)
+  const { researchers, loading: researchersLoading, error: researchersError } = useResearchers()
+  const { queries, loading: queriesLoading, error: queriesError } = useQueries()
   const [isHidden, setIsHidden] = useState(false)
   const [showQueryDropdown, setShowQueryDropdown] = useState(false)
   const [filteredQueries, setFilteredQueries] = useState<string[]>([])
   const queryInputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [queryInputValue, setQueryInputValue] = useState(selectedQuery)
-  
-  const pastFiveDays = Array.from({ length: 5 }).map((_, i) => {
-    const date = new Date()
-    date.setDate(date.getDate() - i)
-    return date.toISOString().slice(0, 10)
-  })
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const today = new Date()
-    const yesterday = new Date(today)
-    yesterday.setUTCDate(yesterday.getUTCDate() - 1)
-    
-    const todayUTC = today.toISOString().slice(0, 10)
-    const yesterdayUTC = yesterday.toISOString().slice(0, 10)
-    
-    if (dateString === todayUTC) return 'Today'
-    if (dateString === yesterdayUTC) return 'Yesterday'
-    
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
-
-  useEffect(() => {
-    fetchResearchers()
-    fetchQueries()
-  }, [])
 
   useEffect(() => {
     setQueryInputValue(selectedQuery)
@@ -120,68 +101,6 @@ export default function ResearcherFilter({
     }
   }, [queryInputValue, queries])
 
-
-
-  const fetchResearchers = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await fetch('/api/researchers')
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      const data = await response.json()
-      
-      // Ensure data is an array
-      if (Array.isArray(data)) {
-        setResearchers(data)
-      } else {
-        console.error('API returned non-array data:', data)
-        setResearchers([])
-        setError('Invalid data format received')
-      }
-    } catch (error) {
-      console.error('Error fetching researchers:', error)
-      setError(error instanceof Error ? error.message : 'Failed to fetch researchers')
-      setResearchers([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchQueries = async () => {
-    try {
-      setQueriesLoading(true)
-      setQueriesError(null)
-      const response = await fetch('/api/queries')
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      const data = await response.json()
-      
-      // Ensure data is an array and remove duplicates
-      if (Array.isArray(data)) {
-        const uniqueQueries = [...new Set(data)].sort()
-        setQueries(uniqueQueries)
-        setFilteredQueries(uniqueQueries)
-      } else {
-        console.error('API returned non-array data:', data)
-        setQueries([])
-        setQueriesError('Invalid data format received')
-      }
-    } catch (error) {
-      console.error('Error fetching queries:', error)
-      setQueriesError(error instanceof Error ? error.message : 'Failed to fetch queries')
-      setQueries([])
-    } finally {
-      setQueriesLoading(false)
-    }
-  }
-
   const handleQueryInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     setQueryInputValue(value)
@@ -217,61 +136,7 @@ export default function ResearcherFilter({
 
   const activeFiltersCount = getActiveFiltersCount()
 
-  // CSS-based icons as inline SVGs
-  const ChevronDownIcon = () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-    </svg>
-  )
 
-  const ChevronUpIcon = () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-    </svg>
-  )
-
-  const FilterIcon = () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-    </svg>
-  )
-
-  const UserIcon = () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-    </svg>
-  )
-
-  const SearchIcon = () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-    </svg>
-  )
-
-  const XIcon = () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-    </svg>
-  )
-
-  const CalendarIcon = () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-    </svg>
-  )
-
-  const EyeIcon = () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-    </svg>
-  )
-
-  const StarIcon = () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-    </svg>
-  )
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4">
@@ -363,12 +228,12 @@ export default function ResearcherFilter({
                 value={selectedResearcher}
                 onChange={(e) => onResearcherChange(e.target.value)}
                 className="w-full px-3 py-2 pr-8 bg-white border-0 text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 hover:bg-gray-50 transition-colors appearance-none"
-                disabled={loading}
+                disabled={researchersLoading}
               >
                 <option value="all">All Analysts</option>
-                {loading ? (
+                {researchersLoading ? (
                   <option disabled>Loading researchers...</option>
-                ) : error ? (
+                ) : researchersError ? (
                   <option disabled>Error loading researchers</option>
                 ) : (
                   researchers.map((researcher) => (
@@ -480,7 +345,7 @@ export default function ResearcherFilter({
                 className="w-full px-3 py-2 pr-8 bg-white border-0 text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 hover:bg-gray-50 transition-colors appearance-none"
               >
                 <option value="">All Dates</option>
-                {pastFiveDays.map(date => (
+                {getPastFiveDays().map(date => (
                   <option key={date} value={date}>
                     {formatDate(date)}
                   </option>
